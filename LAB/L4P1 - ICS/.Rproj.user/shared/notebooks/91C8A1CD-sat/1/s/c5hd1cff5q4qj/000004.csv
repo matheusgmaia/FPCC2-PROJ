@@ -1,0 +1,10 @@
+"0","library(tidyverse)"
+"0","theme_set(theme_bw())"
+"0","library(boot)"
+"0","library(broom)"
+"0","library(ggpubr)"
+"2","Registered S3 method overwritten by 'data.table':
+  method           from
+  print.data.table     
+"
+"0","library(dplyr)"

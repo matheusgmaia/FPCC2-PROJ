@@ -1,0 +1,139 @@
+---
+title: "Correlações no SIP Dataset"
+output:
+    html_document:
+    df_print: paged
+theme: sandstone
+---
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(here)
+source(here::here("code/lib.R"))
+theme_set(theme_bw())
+
+knitr::opts_chunk$set(tidy = FALSE,
+                      fig.width = 6,
+                      fig.height = 5,
+                      echo = FALSE)
+
+```
+
+```{r read}
+estimativas_raw = read_projectdata()
+```
+
+## O que são os dados
+
+```{r}
+glimpse(estimativas_raw)
+```
+
+## Entendendo os dados
+
+```{r}
+estimativas_raw %>% 
+    summarise(
+        projetos = n_distinct(project_code), 
+        categoprias = n_distinct(category), 
+        sub_categorias = n_distinct(sub_category), 
+        estimativas = n(), 
+        tasks = n_distinct(task_number), 
+        prioridades = n_distinct(priority)
+    )
+```
+
+Temos 20 projetos, com 12299 estimativas de tempo para tasks. Não há apenas uma estimativa por tarefa, já que há apenas 10266 valores distintos de `task_number`.
+
+```{r}
+estimativas_raw %>% 
+    count(task_number, category, summary, sort = T)
+```
+
+
+### Dados com 1 estimativa por task
+
+Para nossa análise, usaremos uma estimativa por task. Caso haja mais de uma usaremos a média das estimativas_raw:
+
+```{r}
+por_task = estimativas_raw %>%
+    group_by(project_code, task_number, category, sub_category, priority, summary) %>%
+    summarise(
+        hours_estimate = mean(hours_estimate),
+        hours_actual = mean(hours_actual),
+        erro_absoluto = abs(hours_estimate - hours_actual),
+        .groups = "drop"
+    ) 
+```
+
+
+### Dados por time
+
+```{r}
+por_time = estimativas_raw %>% 
+    group_by(project_code) %>% 
+    summarise(devs = n_distinct(developer_id),
+              erro_medio_abs = mean(abs(hours_estimate - hours_actual)), 
+              estimativas = n(), 
+              .groups = "drop")
+```
+
+
+## Qual a relação entre as estimativas e horas reais tomadas na empresa como um todo e como é essa relação em diferentes subcategorias de tarefa?
+
+```{r}
+correlacao = por_task %>% group_by(category) %>% summarise(correlacao = cor(hours_estimate, hours_actual, method ="pearson"))
+
+correlacao %>% ggplot(aes(y = reorder(category, correlacao), x = correlacao, color = category, fill = category))+
+    geom_bar(stat = "identity")
+```
+
+```{r}
+correlacao = por_task %>% group_by(category, sub_category) %>% summarise(correlacao = cor(hours_estimate, hours_actual, method ="pearson"))
+correlacao$category_full = paste(correlacao$category, "-", correlacao$sub_category )
+
+correlacao %>% ggplot(aes(y = reorder(category_full, correlacao), x = correlacao, color = category))+
+    geom_point()+
+    theme(axis.text.y = element_text(hjust=0))
+```
+
+Em todas as categorias existe um correlacao positiva entre horas estimadas e horas reais. Na categoria manutencão essa correlacao é maior. 
+Nas subcategorias, as que mais se destacam são as de especificacão técnica e boarding meeting.
+
+
+## Há uma relação perceptível entre o tamanho da equipe está relacionado com o erro médio das estimativas da equipe? Como é essa relação?
+
+```{r}
+erro_por_n_dev = por_time %>%group_by(devs) %>% 
+    summarise(erro_medio_devs = mean(erro_medio_abs))
+correlacao = erro_por_n_dev %>% summarise(cor(devs, erro_medio_devs))
+ 
+erro_por_n_dev %>% 
+    ggplot(aes(x = devs, y = erro_medio_devs)) +
+    geom_point()+
+    labs(
+         x = "TAMANHO DO TIME", 
+         y = "MÉDIA DOS ERROS",
+         title = paste("Média dos erros por tamanho do time.   ", "CORR:", correlacao)
+    )
+```
+Não parece existir correlacão forte entre tamanho do time e erro médio. A correlacao encontrada (tíyulo do gráfico) foi de -0.28.
+
+
+## Qual a relação entre prioridade da tarefa e erro na sua estimativa?
+
+```{r}
+erro_por_prioridade = por_task %>%group_by(priority) %>% 
+    summarise(erro_medio_prio = mean(erro_absoluto))
+correlacao = erro_por_prioridade %>% summarise(cor(priority, erro_medio_prio))
+
+erro_por_prioridade %>% 
+    ggplot(aes(x = priority, y = erro_medio_prio)) +
+    geom_point()+
+    labs(
+         x = "PRIORIDADE", 
+         y = "MÉDIA DOS ERROS",
+         title = paste("Média dos erros por tamanho do time.   ", "CORR:", correlacao)
+    )
+```
+A correlacão existe mas é fraca. A correlacao encontrada (título do gráfico) foi de 0.37. No graico não aparente existir correlacão. O ponto extremo deve ter aumentado o valor resultante da correlacao, já que existem poucos pontos.

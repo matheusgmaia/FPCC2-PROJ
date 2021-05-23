@@ -1,0 +1,9 @@
+"0","```r
+clima10 %>% 
+    ggplot(aes(x = ano, y = temp_max)) +
+    facet_wrap(~ cidade) +
+    geom_point(alpha = .5, size = .9) + 
+    labs(
+        y = \"Calor\"
+    )
+```"

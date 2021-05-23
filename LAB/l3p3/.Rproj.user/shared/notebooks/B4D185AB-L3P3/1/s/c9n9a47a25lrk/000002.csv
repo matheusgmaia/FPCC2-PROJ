@@ -1,0 +1,4 @@
+"0","dados = read_csv(here::here(""data/satisfacoes.csv""), "
+"0","                 col_types = ""cdcc"") "
+"2","Error: '/home/maia/Documents/Universidade/Universidade/UNIVERSIDADE/MESTRADO/CADEIRAS/FPCC2/LAB/l3p3/data/satisfacoes.csv' does not exist.
+"

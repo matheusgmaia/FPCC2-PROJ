@@ -1,0 +1,298 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+theme_set(theme_bw())
+library(boot)
+library(broom)
+library(dplyr)
+
+```
+
+
+```{r}
+dados = read_csv(here::here("data/arquivo-baixado.csv"))
+
+dados = dados %>%
+rename(
+sono_semana = `Quantas horas por noite você dorme DURANTE A SEMANA em média?`,
+sono_fds = `Quantas horas por noite você dorme durante NO FIM DE SEMANA em média?`
+)
+```
+```{r}
+dados
+```
+
+```{r}
+CDD = dados %>% 
+    filter(Curso %in% "CDD")
+
+FPCC = dados %>% 
+    filter(Curso %in% "FPCC")
+```
+
+
+
+```{r}
+
+A 
+```
+
+```{r}
+
+theta_CCD <- function(dados, i) {
+    CDD_SUM_SONO=dados %>% 
+        slice(i) %>% 
+        group_by(Curso) %>% 
+        summarise(media = mean(sono_semana+sono_fds)) %>%
+        filter(Curso == "CDD")%>%
+        pull(media)
+    CDD_SUM_SONO 
+}
+
+theta_FPCC <- function(dados, i) {
+    FPCC_SUM_SONO=dados %>% 
+        slice(i) %>% 
+        group_by(Curso) %>% 
+        summarise(media = mean(sono_semana+sono_fds)) %>%
+        filter(Curso == "FPCC")%>%
+        pull(media)
+    FPCC_SUM_SONO 
+}
+
+theta_FDS_SEMANA <- function(d, i) {
+    SUM_SONO=dados %>% 
+        slice(i) %>% 
+        group_by(Curso) %>% 
+        summarise(media = mean(sono_semana+sono_fds))
+    CDD_SUM_SONO = SUM_SONO %>% filter(Curso == "CDD")%>% pull(media)
+    FPCC_SUM_SONO = SUM_SONO %>% filter(Curso == "FPCC")%>% pull(media)
+    CDD_SUM_SONO - FPCC_SUM_SONO
+}
+```
+
+```{r}
+theta_CCD_SEMANA <- function(dados, i) {
+    CDD_SUM_SONO=dados %>% 
+        slice(i) %>% 
+        group_by(Curso) %>% 
+        summarise(media = mean(sono_semana)) %>%
+        filter(Curso == "CDD")%>%
+        pull(media)
+    CDD_SUM_SONO 
+}
+
+theta_FPCC_SEMANA <- function(dados, i) {
+    FPCC_SUM_SONO=dados %>% 
+        slice(i) %>% 
+        group_by(Curso) %>% 
+        summarise(media = mean(sono_semana)) %>%
+        filter(Curso == "FPCC")%>%
+        pull(media)
+    FPCC_SUM_SONO 
+}
+
+theta_CCD_FDS <- function(dados, i) {
+    CDD_SUM_SONO=dados %>% 
+        slice(i) %>% 
+        group_by(Curso) %>% 
+        summarise(media = mean(sono_fds)) %>%
+        filter(Curso == "CDD")%>%
+        pull(media)
+    CDD_SUM_SONO 
+}
+
+theta_FPCC_FDS <- function(dados, i) {
+    FPCC_SUM_SONO=dados %>% 
+        slice(i) %>% 
+        group_by(Curso) %>% 
+        summarise(media = mean(sono_fds)) %>%
+        filter(Curso == "FPCC")%>%
+        pull(media)
+    FPCC_SUM_SONO 
+}
+
+theta_DIFF_CDD <- function(d, i) {
+    SUM_SONO=dados %>% 
+        slice(i) %>% 
+        group_by(Curso) %>% 
+        filter(Curso == "CDD")%>%
+        summarise(media_sono_semana = mean(sono_semana),
+                  media_sono_fds = mean(sono_fds))
+    SEMANA_SONO = SUM_SONO %>% pull(media_sono_semana)
+    FDS_SONO = SUM_SONO %>%  pull(media_sono_fds)
+    FDS_SONO - SEMANA_SONO 
+}
+
+theta_DIFF_FPCC <- function(d, i) {
+    SUM_SONO=dados %>% 
+        slice(i) %>% 
+        group_by(Curso) %>% 
+        filter(Curso == "FPCC")%>%
+        summarise(media_sono_semana = mean(sono_semana),
+                  media_sono_fds = mean(sono_fds))
+    SEMANA_SONO = SUM_SONO %>% pull(media_sono_semana)
+    FDS_SONO = SUM_SONO %>%  pull(media_sono_fds)
+    FDS_SONO - SEMANA_SONO 
+}
+
+theta_DIFF <- function(d, i) {
+    SUM_SONO=dados %>% 
+        slice(i) %>% 
+        group_by(Curso) %>% 
+        filter(Curso == "CDD")%>%
+        summarise(media_sono_semana = mean(sono_semana),
+                  media_sono_fds = mean(sono_fds))
+    SEMANA_SONO = SUM_SONO %>% pull(media_sono_semana)
+    FDS_SONO = SUM_SONO %>%  pull(media_sono_fds)
+    CDD = FDS_SONO - SEMANA_SONO 
+
+    SUM_SONO=dados %>% 
+        slice(i) %>% 
+        group_by(Curso) %>% 
+        filter(Curso == "FPCC")%>%
+        summarise(media_sono_semana = mean(sono_semana),
+                  media_sono_fds = mean(sono_fds))
+    SEMANA_SONO = SUM_SONO %>% pull(media_sono_semana)
+    FDS_SONO = SUM_SONO %>%  pull(media_sono_fds)
+    FPCC = FDS_SONO - SEMANA_SONO 
+    CDD - FPCC
+}
+```
+
+```{r}
+CCD_SEMANA = boot(data = dados,
+           statistic = theta_CCD_SEMANA,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+CCD_SEMANA$nome = "CCD_SEMANA"
+CCD_SEMANA$curso = "CCD"
+CCD_SEMANA$tipo = "Durante a Semana"
+
+FPCC_SEMANA = boot(data = dados,
+           statistic = theta_FPCC_SEMANA,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+FPCC_SEMANA$nome = "FPCC_SEMANA"
+FPCC_SEMANA$curso = "FPCC"
+FPCC_SEMANA$tipo = "Durante a Semana"
+
+CCD_FDS = boot(data = dados,
+           statistic = theta_CCD_FDS,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+CCD_FDS$nome = "CCD_FDS"
+CCD_FDS$curso = "CCD"
+CCD_FDS$tipo = "Fim de Semana"
+
+FPCC_FDS = boot(data = dados,
+           statistic = theta_FPCC_FDS,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+FPCC_FDS$nome = "FPCC_FDS"
+FPCC_FDS$curso = "FPCC"
+FPCC_FDS$tipo = "Fim de Semana"
+
+CCD = boot(data = dados ,
+           statistic = theta_DIFF_CDD,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+CCD$nome = "CCD_DIFF"
+CCD$curso = "CCD"
+
+FPCC = boot(data = dados ,
+           statistic = theta_DIFF_FPCC,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+FPCC$nome = "FPCC_DIFF"
+FPCC$curso = "FPCC"
+
+DIFF = boot(data = dados ,
+           statistic = theta_DIFF,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+```
+
+```{r}
+ciMedia <- rbind(FPCC_SEMANA, FPCC_FDS, CCD_SEMANA, CCD_FDS)
+ciDiff <- rbind(FPCC, CCD)
+```
+
+```{r}
+ciMedia
+```
+
+
+```{r}
+ciDiff
+```
+
+
+```{r}
+ciMedia %>% 
+  ggplot(aes(
+            ymin = conf.low,
+            y = statistic,
+            ymax = conf.high,
+            x = tipo,
+            color = tipo
+        )) +
+        geom_linerange() +
+        facet_grid(. ~ curso) +
+        geom_point(size = 2) +
+        labs(x = "", y = "Média de sono")
+```
+
+
+```{r}
+ciDiff %>% 
+  ggplot(aes(
+            ymin = conf.low,
+            y = statistic,
+            ymax = conf.high,
+            x = curso,
+            color = curso
+        )) +
+        geom_linerange() +
+        geom_point(size = 2) +
+        labs(x = "", y = "Diferença entre médias", title="Diferença entre médias de Fim de Semana e Durante Semana")
+```
+
+```{r}
+DIFF
+```
+
+
+```{r}
+DIFF %>% 
+  ggplot(aes(
+            ymin = conf.low,
+            y = statistic,
+            ymax = conf.high,
+            x = ""
+        )) +
+        geom_linerange() +
+        geom_point(size = 2) +
+        scale_y_continuous(limits = c(-5, 5)) +
+        labs(y = "Horas de Sono", x = "Diferenca entre impactos", title="Diferenca entre impactos. CDD-FPCC ")+
+    coord_flip()
+```
+

@@ -1,0 +1,6 @@
+"0","```r
+variacao %>% 
+    ggplot(aes(x = ano, y = amplitude, color = cidade)) + 
+    geom_point() + 
+    geom_line()
+```"

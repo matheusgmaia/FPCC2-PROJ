@@ -1,0 +1,6 @@
+"0","```r
+clima10 %>% 
+    group_by(cidade) %>% 
+    summarise(variancia = sum((temp_max - mean(temp_max))**2) / n(), 
+              desvio_padrao = sqrt(variancia))
+```"

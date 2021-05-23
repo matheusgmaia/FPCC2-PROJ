@@ -1,0 +1,12 @@
+"0","```r
+clima10 %>% 
+    ggplot(aes(x = ano, y = temp_max)) +
+    facet_wrap(~ cidade) +
+    geom_point(alpha = .75, size = .9, color = \"grey\") + 
+    geom_point(data = sumarios, aes(y = temp_max_anual)) + 
+    geom_point(data = sumarios, aes(y = temp_min_anual)) + 
+    geom_point(data = sumarios, aes(y = temp_metade), color = \"red\") + 
+    labs(
+        y = \"Calor\"
+    )
+```"

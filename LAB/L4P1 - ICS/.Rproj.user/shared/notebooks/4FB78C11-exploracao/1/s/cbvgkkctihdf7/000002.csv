@@ -1,0 +1,4 @@
+"0","```r
+clima %>% 
+    filter(temp_media < 21)
+```"

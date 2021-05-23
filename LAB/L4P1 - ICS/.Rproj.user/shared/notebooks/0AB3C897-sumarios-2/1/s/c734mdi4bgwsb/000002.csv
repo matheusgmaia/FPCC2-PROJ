@@ -1,0 +1,8 @@
+"0","```r
+clima10 %>% 
+    ggplot(aes(x = ano, y = chuva)) + 
+    facet_wrap(~ cidade) + 
+    geom_point(size = .9, alpha = .7, color = \"gray\") + 
+    stat_summary(geom = \"point\", color = \"coral\", fun = mean) +
+    stat_summary(geom = \"point\", color = \"darkblue\", fun = median) 
+```"

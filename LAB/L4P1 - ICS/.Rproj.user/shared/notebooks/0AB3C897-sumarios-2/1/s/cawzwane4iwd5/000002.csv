@@ -1,0 +1,12 @@
+"0","```r
+sumarios = clima10 %>% 
+    group_by(cidade, ano) %>% 
+    summarise(temp_max_anual = max(temp_max), 
+              temp_min_anual = min(temp_max),
+              temp_metade = median(temp_max),
+              chuva_max = max(chuva), 
+              chuva_mediana = median(chuva), 
+              chuva_min = min(chuva),
+              chuva_90perc = quantile(chuva, .9),
+              .groups = \"drop\")
+```"

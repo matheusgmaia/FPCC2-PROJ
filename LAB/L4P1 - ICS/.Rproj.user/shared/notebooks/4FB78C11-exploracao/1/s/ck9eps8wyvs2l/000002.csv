@@ -1,0 +1,6 @@
+"0","```r
+clima_tudo %>% 
+    filter(ano >= 2020, cidade != \"Patos\") %>% 
+    ggplot(aes(x = semana, y = temp_media, color = cidade)) + 
+    geom_point()
+```"

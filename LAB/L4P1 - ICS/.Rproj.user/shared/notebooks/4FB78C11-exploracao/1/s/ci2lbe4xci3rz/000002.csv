@@ -1,0 +1,5 @@
+"0","```r
+clima %>% 
+    ggplot(mapping = aes(y = cidade, x  = chuva)) + 
+    geom_jitter(height = .1, color = \"steelblue\", alpha = .5)
+```"

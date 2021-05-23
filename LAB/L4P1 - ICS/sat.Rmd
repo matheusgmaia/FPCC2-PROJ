@@ -1,0 +1,236 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+theme_set(theme_bw())
+library(boot)
+library(broom)
+library(ggpubr)
+library(dplyr)
+```
+
+
+```{r}
+dados = read_csv(here::here("sat-gpa.csv"))
+dados
+```
+
+```{r}
+plot1 <- dados %>% ggplot() + 
+    geom_jitter(aes(x = "comp_GPA", y =comp_GPA), width = 0.05, height =.01, color="red") + 
+    geom_jitter(aes(x = "univ_GPA", y =univ_GPA ), width = 0.05, height =.01, color="red") +
+    geom_violin(aes(x = "univ_GPA", y =univ_GPA ), alpha = 0.1, color="red") + 
+    geom_violin(aes(x = "comp_GPA", y =comp_GPA ), alpha = 0.1, color="red") + 
+    labs(
+         x = "TESTE", 
+         y = "NOTA"
+    )
+
+plot2 <-  dados %>% ggplot() + 
+    geom_jitter(aes(x = "math_SAT", y =math_SAT), width = 0.05, height =.01, color="blue") + 
+    geom_jitter(aes(x = "verb_SAT", y =verb_SAT ), width = 0.05, height =.01, color="blue") + 
+    geom_violin(aes(x = "math_SAT", y =math_SAT ), alpha = 0.1, color="blue") + 
+    geom_violin(aes(x = "verb_SAT", y =verb_SAT ), alpha = 0.1, color="blue") + 
+        labs(
+         x = "TESTE", 
+         y = "NOTA"
+    )
+
+figure <- ggarrange(plot1, plot2,
+                    labels = c("GPA", "SAT"),
+                    ncol = 2, nrow = 1)
+figure
+```
+
+```{r}
+plot1Cor <- cor(dados$math_SAT, dados$verb_SAT, method ="pearson")
+plot1 <- dados %>% ggplot() + 
+    geom_point(aes(x = math_SAT, y =verb_SAT))+
+    labs(
+         x = paste("math_SAT",  round(plot1Cor, 2)), 
+         y = "verb_SAT"
+    )
+
+plot2Cor <- cor(dados$math_SAT, dados$comp_GPA, method ="pearson")
+plot2 <- dados %>% ggplot() + 
+    geom_point(aes(x = math_SAT, y =comp_GPA)) +
+    labs(
+         x = paste("math_SAT",  round(plot2Cor,2)), 
+         y = "comp_GPA"
+    )
+
+plot3Cor <- cor(dados$math_SAT, dados$univ_GPA, method ="pearson")
+plot3 <- dados %>% ggplot() + 
+    geom_point(aes(x = math_SAT, y =univ_GPA)) +
+    labs(
+         x = paste("math_SAT",  round(plot3Cor, 2)), 
+         y = "univ_GPA"
+    )
+
+plot4Cor <- cor(dados$verb_SAT, dados$comp_GPA, method ="pearson")
+plot4 <- dados %>% ggplot() + 
+    geom_point(aes(x = verb_SAT, y =comp_GPA)) +
+    labs(
+         x = paste("verb_SAT",  round(plot4Cor, 2)),
+         y = "comp_GPA"
+    )
+
+
+plot5Cor <- cor(dados$verb_SAT, dados$univ_GPA, method ="pearson")
+plot5 <- dados %>% ggplot() + 
+    geom_point(aes(x = verb_SAT, y =univ_GPA)) +
+    labs(
+         x = paste("verb_SAT",  round(plot5Cor, 2)),
+         y = "univ_GPA"
+    )
+
+plot6Cor <- cor(dados$comp_GPA, dados$univ_GPA, method ="pearson")
+plot6 <- dados %>% ggplot() + 
+    geom_point(aes(x = comp_GPA, y =univ_GPA)) +
+    labs(
+         x = paste("comp_GPA",  round(plot6Cor, 2)),
+         y = "univ_GPA"
+    )
+
+figure <- ggarrange(plot1, plot2, plot3, plot4, plot5, plot6,
+                    ncol = 3, nrow = 2)
+figure
+```
+
+
+```{r}
+#math_SAT verb_SAT comp_GPA univ_GPA
+
+thetaM_V <- function(d, i) {
+    smile = d %>%
+        slice(i)
+    M = smile$math_SAT
+    V = smile$verb_SAT
+    cor = cor(M, V, method ="pearson")
+    cor
+}
+
+thetaM_C <- function(d, i) {
+    smile = d %>%
+        slice(i)
+    M = smile$math_SAT
+    V = smile$comp_GPA
+    cor = cor(M, V, method ="pearson")
+    cor
+}
+
+thetaM_U <- function(d, i) {
+    smile = d %>%
+        slice(i)
+    M = smile$math_SAT
+    V = smile$univ_GPA
+    cor = cor(M, V, method ="pearson")
+    cor
+}
+
+thetaV_C <- function(d, i) {
+    smile = d %>%
+        slice(i) 
+    M = smile$verb_SAT
+    V = smile$comp_GPA
+    cor = cor(M, V, method ="pearson")
+    cor
+}
+
+thetaV_U <- function(d, i) {
+    smile = d %>%
+        slice(i)
+    M = smile$verb_SAT
+    V = smile$univ_GPA
+    cor = cor(M, V, method ="pearson")
+    cor
+}
+
+thetaC_U <- function(d, i) {
+    smile = d %>%
+        slice(i) 
+    M = smile$comp_GPA
+    V = smile$univ_GPA
+    cor = cor(M, V, method ="pearson")
+    cor
+}
+
+boot1 = boot(data = dados,
+           statistic = thetaM_V,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+boot1$nome = "math_SAT,verb_SAT"
+
+boot2 = boot(data = dados,
+           statistic = thetaM_C,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+boot2$nome = "math_SAT,comp_GPA"
+
+boot3 = boot(data = dados,
+           statistic = thetaM_U,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+boot3$nome = "math_SAT,univ_GPA"
+
+boot4 = boot(data = dados,
+           statistic = thetaV_C,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+boot4$nome = "verb_SAT,comp_GPA"
+
+boot5 = boot(data = dados,
+           statistic = thetaV_U,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+boot5$nome = "verb_SAT,univ_GPA"
+
+boot6 = boot(data = dados,
+           statistic = thetaC_U,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+boot6$nome = "comp_GPA,univ_GPA"
+
+DiffMedias <- rbind(boot1, boot2, boot3, boot4, boot5, boot6)
+```
+
+```{r}
+DiffMedias
+```
+
+
+```{r}
+
+#math_SAT verb_SAT comp_GPA univ_GPA
+
+DiffMedias %>% 
+  ggplot(aes(
+            ymin = conf.low,
+            y = statistic,
+            ymax = conf.high,
+            x =reorder(nome, c(5,4,3,2,1,0)),
+            color = nome
+        )) +
+        scale_y_continuous(limits = c(0, 1)) +
+        geom_linerange() +
+        geom_point(size = 2) +
+        labs(x = "", y = "Diferenca entre notas")+
+    coord_flip()
+```
+

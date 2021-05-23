@@ -1,0 +1,6 @@
+"0","```r
+clima %>% 
+    ggplot(aes(x  = semana, y = chuva, color = cidade)) + 
+    facet_wrap(~ cidade, ncol = 1) + 
+    geom_point()
+```"

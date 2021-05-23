@@ -1,0 +1,8 @@
+"0","```r
+library(tidyverse)
+theme_set(theme_bw())
+library(boot)
+library(broom)
+library(dplyr)
+
+```"

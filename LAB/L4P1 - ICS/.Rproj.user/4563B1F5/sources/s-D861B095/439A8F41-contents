@@ -1,0 +1,280 @@
+---
+title: "L3P3 - Intervalos de confianca em Jukebox sociais- Matheus Maia"
+output:
+    html_document:
+    df_print: paged
+theme: sandstone
+---
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+theme_set(theme_bw())
+library(boot)
+library(broom)
+library(dplyr)
+library(gridExtra)
+
+knitr::opts_chunk$set(tidy = FALSE,
+                      fig.width = 6,
+                      fig.height = 5)
+```
+
+```{r read}
+dados = read_csv(here::here("dados.csv"), 
+                 col_types = "cdcc") 
+glimpse(dados)
+```
+
+```{r}
+dados$user_id
+```
+
+
+
+```{r}
+comparacao1 = dados %>% 
+    filter(scenario %in% c("baseline", "skip","combined", "up/downvoting"))
+
+
+thetaB <- function(d, i) {
+    agrupado = d %>% 
+        slice(i) %>% 
+        group_by(scenario) %>% 
+        summarise(media = mean(satisfaction))
+    b = agrupado %>% filter(scenario == "baseline") %>% pull(media)
+    b
+}
+
+thetaS <- function(d, i) {
+    agrupado = d %>% 
+        slice(i) %>% 
+        group_by(scenario) %>% 
+        summarise(media = mean(satisfaction))
+    b = agrupado %>% filter(scenario == "skip") %>% pull(media)
+    b
+}
+
+thetaC <- function(d, i) {
+    agrupado = d %>% 
+        slice(i) %>% 
+        group_by(scenario) %>% 
+        summarise(media = mean(satisfaction))
+    b = agrupado %>% filter(scenario == "combined") %>% pull(media)
+    b
+}
+
+thetaU <- function(d, i) {
+    agrupado = d %>% 
+        slice(i) %>% 
+        group_by(scenario) %>% 
+        summarise(media = mean(satisfaction))
+    b = agrupado %>% filter(scenario == "up/downvoting") %>% pull(media)
+    b
+}
+
+
+thetaBS <- function(d, i) {
+    agrupado = d %>% 
+        slice(i) %>% 
+        group_by(scenario) %>% 
+        summarise(media = mean(satisfaction))
+    b = agrupado %>% filter(scenario == "baseline") %>% pull(media)
+    l = agrupado %>% filter(scenario == "skip") %>% pull(media)
+    l - b
+}
+
+thetaBC <- function(d, i) {
+    agrupado = d %>% 
+        slice(i) %>% 
+        group_by(scenario) %>% 
+        summarise(media = mean(satisfaction))
+    b = agrupado %>% filter(scenario == "baseline") %>% pull(media)
+    l = agrupado %>% filter(scenario == "combined") %>% pull(media)
+    l - b
+}
+
+thetaBU <- function(d, i) {
+    agrupado = d %>% 
+        slice(i) %>% 
+        group_by(scenario) %>% 
+        summarise(media = mean(satisfaction))
+    b = agrupado %>% filter(scenario == "baseline") %>% pull(media)
+    l = agrupado %>% filter(scenario == "up/downvoting") %>% pull(media)
+    l - b
+}
+
+thetaSC <- function(d, i) {
+    agrupado = d %>% 
+        slice(i) %>% 
+        group_by(scenario) %>% 
+        summarise(media = mean(satisfaction))
+    b = agrupado %>% filter(scenario == "skip") %>% pull(media)
+    l = agrupado %>% filter(scenario == "combined") %>% pull(media)
+    l - b
+}
+
+thetaSU <- function(d, i) {
+    agrupado = d %>% 
+        slice(i) %>% 
+        group_by(scenario) %>% 
+        summarise(media = mean(satisfaction))
+    b = agrupado %>% filter(scenario == "skip") %>% pull(media)
+    l = agrupado %>% filter(scenario == "up/downvoting") %>% pull(media)
+    l - b
+}
+
+
+thetaCU <- function(d, i) {
+    agrupado = d %>% 
+        slice(i) %>% 
+        group_by(scenario) %>% 
+        summarise(media = mean(satisfaction))
+    b = agrupado %>% filter(scenario == "combined") %>% pull(media)
+    l = agrupado %>% filter(scenario == "up/downvoting") %>% pull(media)
+    l - b
+}
+
+```
+
+```{r}
+ciB = boot(data = comparacao1,
+           statistic = thetaB,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+ciB$nome = "Baseline"
+
+ciS = boot(data = comparacao1,
+           statistic = thetaS,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+ciS$nome = "Skip"
+
+ciC = boot(data = comparacao1,
+           statistic = thetaC,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+ciC$nome = "Combined"
+
+ciU = boot(data = comparacao1,
+           statistic = thetaU,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+ciU$nome = "UP/D"
+```
+
+
+```{r}
+ciBS = boot(data = comparacao1,
+           statistic = thetaBS,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+ciBS$nome = "Baseline - Skip"
+
+ciBC = boot(data = comparacao1,
+           statistic = thetaBC,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+ciBC$nome = "Baseline - Combined"
+
+ciBU = boot(data = comparacao1,
+           statistic = thetaBU,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+ciBU$nome = "Baseline - UP/D"
+
+ciSC = boot(data = comparacao1,
+           statistic = thetaSC,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+ciSC$nome = "Skip - Combined"
+
+ciSC = boot(data = comparacao1,
+           statistic = thetaSC,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+ciSC$nome = "Skip - Combined"
+
+ciSU = boot(data = comparacao1,
+           statistic = thetaSU,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+ciSU$nome = "Skip - UP/D"
+
+ciCU = boot(data = comparacao1,
+           statistic = thetaCU,
+           R = 2000) %>%
+    tidy(conf.level = .95,
+         conf.method = "bca",
+         conf.int = TRUE)
+ciCU$nome = "Combined - UP/D"
+```
+
+
+```{r}
+ciMedia <- rbind(ciB, ciS, ciC, ciU)
+ciDiff <- rbind(ciBS, ciBC, ciBU, ciSC, ciSU, ciCU)
+```
+
+```{r}
+dados %>% 
+  ggplot(aes(
+            y = satisfaction,
+            color = scenario
+        )) +
+        geom_point(size = 2, alphas = .5) +
+        scale_y_continuous(limits = c(0, 5)) +
+        labs(x = "", y = "Satisfaction / Scenario")
+```
+
+```{r}
+ciMedia %>% 
+  ggplot(aes(
+            ymin = conf.low,
+            y = statistic,
+            ymax = conf.high,
+            x = reorder(nome, c(0,1,3,2)),
+            color = nome
+        )) +
+        geom_linerange() +
+        geom_point(size = 2) +
+        scale_y_continuous(limits = c(0, 5)) +
+        labs(x = "", y = "Artistas novos/mês")
+```
+
+
+```{r}
+ciDiff %>% 
+  ggplot(aes(
+            ymin = conf.low,
+            y = statistic,
+            ymax = conf.high,
+            x = reorder(nome, c(0,1,2,3,4,5)),
+            color = nome
+        )) +
+        geom_linerange() +
+        geom_point(size = 2) +
+        scale_y_continuous(limits = c(-5, 5)) +
+        labs(x = "", y = "Diferenca entre cenários")+
+    coord_flip()
+```

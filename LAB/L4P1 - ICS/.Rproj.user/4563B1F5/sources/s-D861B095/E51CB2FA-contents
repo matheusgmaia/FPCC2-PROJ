@@ -1,0 +1,295 @@
+---
+title: "EDA SIP"
+output:
+    html_document:
+    df_print: paged
+theme: sandstone
+---
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(here)
+source(here::here("code/lib.R"))
+theme_set(theme_bw())
+
+knitr::opts_chunk$set(tidy = FALSE,
+                      fig.width = 6,
+                      fig.height = 5,
+                      echo = FALSE)
+
+```
+
+```{r read}
+estimativas_raw = read_projectdata()
+```
+
+```{r}
+estimativas_raw
+```
+
+## O que são os dados
+
+```{r}
+glimpse(estimativas_raw)
+```
+
+## Entendendo os dados
+
+Qual a distribuição das estimativas? Dos tempos de tarefa? Os tamahos de time? Quantos projetos temos? O que mais lhe parece relevante de explorar antes de começar a trabalhar com perguntas sobre as estimativas e tempos de tarefa das pessoas que trabalharam nas tarefas que os dados descrevem? 
+```{r}
+estimativas_unicas = estimativas_raw %>%
+    group_by(task_number) %>%
+    slice(which.max(task_number))
+estimativas_unicas
+```
+
+### Estimativas
+
+```{r, warning=FALSE}
+sumario = estimativas_unicas %>% 
+    group_by(category) %>% 
+    summarise(media = mean(hours_estimate),
+              mediana = median(hours_estimate),
+              mais = quantile(hours_estimate, .75),
+              menos = quantile(hours_estimate, .25))
+
+ggplot(estimativas_unicas , aes(x = category, y = hours_estimate, color = category)) +
+    geom_jitter(width = 0.05, alpha = .1) + 
+    geom_violin(alpha = 0.05)+
+    ggtitle("ESTIMATIVA DE HORAS por CATEGORIA ")+ 
+    geom_point(data = sumario, aes(x=category, y=media), alpha=.9, size = 3, color = "black", shape=18)+
+    geom_point(data = sumario, aes(x=category, y=mediana), alpha=.9, size = 3, color = "black", shape=4)+
+    geom_point(data = sumario, aes(x=category, y=mais), alpha=.9, size = 3, color = "black", shape=6)+
+    geom_point(data = sumario, aes(x=category, y=menos), alpha=.9, size = 3, color = "black", shape=2)+
+    scale_y_continuous(trans='log2', limits = c(0.01, 260), breaks = c(0.03,0.06, 0.12,0.25,0.5,1,2,4,8,16,32,64,128,256))+
+    labs(
+         x = "CATEGORIA", 
+         y = "ESTIMATIVA DE HORAS",
+         tittle = "Estimaticas por Categoria"
+    )
+```
+
+```{r, warning=FALSE}
+estimativas_unicas %>% group_by(category) %>% summarise(varianca = sum((hours_estimate - mean(hours_estimate)) ** 2) / n(),
+                                                        desvio_padrao = sqrt(varianca))
+```
+
+
+Na figura acima os dois triângulos representam o 25 e o 75 percentil, o X representa a mediana e o losango a média. 
+Para todas as categorias, metade das estimativas se concentram na faixa entre 1 e 8 horas.
+Existem estimativas muito grandes que deslocam a média das estimativas para cima.
+Por conta de valores extremos, a varianca das estimativas é maior para as categorias desenvolvimento e manutencao.
+A distância interquartil percebida no gráfico parece semelhante para todas as categorias.
+
+
+### Tempos
+
+```{r, warning=FALSE}
+
+sumario = estimativas_unicas %>% 
+    group_by(category) %>% 
+    summarise(media = mean(hours_actual),
+              mediana = median(hours_actual),
+              mais = quantile(hours_actual, .75),
+              menos = quantile(hours_actual, .25))
+
+ggplot(estimativas_unicas , aes(x = category, y = hours_actual, color = category)) +
+    geom_jitter(width = 0.05, alpha = .1) + 
+    geom_violin(alpha = 0.05)+
+    geom_point(data = sumario, aes(x=category, y=media), alpha=.9, size = 3, color = "black", shape=18)+
+    geom_point(data = sumario, aes(x=category, y=mediana), alpha=.9, size = 3, color = "black", shape=4)+
+    geom_point(data = sumario, aes(x=category, y=mais), alpha=.9, size = 3, color = "black", shape=6)+
+    geom_point(data = sumario, aes(x=category, y=menos), alpha=.9, size = 3, color = "black", shape=2)+
+    ggtitle("HORAS GASTAS por CATEGORIA ")+ 
+    scale_y_continuous(trans='log2', limits = c(0.01, 4096), breaks = c(0.03,0.06, 0.12,0.25,0.5,1,2,4,8,16,32,64,128,256,1024, 4096))+
+    labs(
+         x = "CATEGORIA", 
+         y = "HORAS REAIS",
+         title = "Horas reais por categorias"
+    )
+```
+
+```{r, warning=FALSE}
+estimativas_unicas %>% group_by(category) %>% summarise(varianca = sum((hours_actual - mean(hours_actual)) ** 2) / n(),
+                                                        desvio_padrao = sqrt(varianca))
+```
+
+Na figura acima os dois triângulos representam o 25 e o 75 percentil, o X representa a mediana e o losango a média. 
+É possível perceber que existem pontos bem maiores nesse gráfico comparando com o gráfico anterior.
+As métricas robustas a valores extremos não se alteraram muito, no entanto é possível perceber que os valores extremos deslocaram a média e alteraram bastante a varianca e desvio padrão nas categorias de desenvolvimento e operacional. 
+
+
+### Tamanhos dos times
+
+```{r, warning=FALSE}
+por_time = estimativas_raw %>% 
+    group_by(project_code, category) %>% 
+    summarise(devs = n_distinct(developer_id),
+              erro_medio_abs = mean(abs(hours_estimate - hours_actual)), 
+              estimativas = n(), 
+              .groups = "drop")
+```
+
+```{r, warning=FALSE}
+sumario = por_time %>% 
+    group_by(category) %>% 
+    summarise(media = mean(devs),
+              mediana = median(devs),
+              mais = quantile(devs, .75),
+              menos = quantile(devs, .25))
+
+
+ggplot(por_time) +
+    geom_jitter(aes(x=category, y=devs, color=category),width = 0.05, alpha = .7) + 
+    geom_point(data = sumario, aes(x=category, y=media), alpha=.9, size = 3, color = "black", shape=18)+
+    geom_point(data = sumario, aes(x=category, y=mediana), alpha=.9, size = 3, color = "black", shape=4)+
+    geom_point(data = sumario, aes(x=category, y=mais), alpha=.9, size = 3, color = "black", shape=6)+
+    geom_point(data = sumario, aes(x=category, y=menos), alpha=.9, size = 3, color = "black", shape=2)+
+    scale_shape_manual(name = "Shapes",
+                 labels = c("media", "mediana", "mais", "menos"),
+                 values = c( 17, 4, 6, 2)) +
+    scale_colour_manual(name = "Category", 
+                    labels = c("Development", "Management", "Operational"),
+                    values = c("red", "green", "blue"))+  
+    ggtitle("TAMANHOS DOS TIMES ")+ 
+    labs(
+         x = "CATEGORIA", 
+         y = "TAMANHO DO TIME",
+         title="Tamanho do time por categoria"
+    )
+```
+
+```{r, warning=FALSE}
+por_time %>% group_by(category) %>% summarise(varianca = sum((devs - mean(devs)) ** 2) / n(),
+                                                        desvio_padrao = sqrt(varianca))
+```
+
+Os times de desenvolvimento tendem a mais numerosos
+Os tamanho dos times varia mais para as tarefas de desenvolvimento.
+
+### Projetos
+
+```{r, warning=FALSE}
+estimativas_raw %>%
+    group_by( category) %>% count()
+```
+
+Existem 8220 projetos de Desenvolvimento. 2105 de Manutencão e 1974 de operacional.
+
+### Outras perguntas
+#### Desenvolvedor que mais trabalhou?
+
+```{r, warning=FALSE}
+devs = estimativas_raw %>% group_by(developer_id, category) %>% summarise(tempo = sum(developer_hours_actual)) 
+ggplot(devs, aes(x = tempo, y = reorder(developer_id, tempo), fill = category)) +
+    geom_bar(position = "stack",  stat='identity')+
+    geom_vline(xintercept = mean(devs$tempo), color="black")+
+    labs(
+         x = "CATEGORIA", 
+         y = "HORAS REAIS",
+         title = "Horas reais por categorias"
+    )
+```
+ A média está representada na linha preta.
+ 10 desenvolvedores trabalharam bem acima da média.
+## Duas perguntas
+
+Consideremos que o erro em uma estimativa é a diferença entre a estimativa e o tempo que a tarefa de fato tomou. O erro absoluto é o módulo do erro. 
+
+### Como é a distribuição do erro nas estimativas de diferentes subcategorias de tarefas? Se quiser, use também as categorias nos dados.
+
+
+```{r, warning=FALSE}
+
+erros = estimativas_raw %>%
+    group_by(project_code, task_number, category, sub_category, priority, summary) %>%
+    summarise(
+        hours_estimate = mean(hours_estimate),
+        hours_actual = mean(hours_actual),
+        erro = abs(hours_estimate - hours_actual),
+        .groups = "drop"
+    ) 
+erros$category_full = paste(erros$category, "-", erros$sub_category )
+
+sumario = erros %>% 
+    group_by(category) %>% 
+    summarise(media = mean(erro),
+              mediana = median(erro),
+              mais = quantile(erro, .75),
+              menos = quantile(erro, .25))
+
+ggplot(erros, aes(x=category, y=erro, color=category))+
+    geom_jitter(width = 0.05, alpha = .4) +
+    geom_violin(alpha = 0.05)+
+    geom_point(data = sumario, aes(x=category, y=media), alpha=.9, size = 3, color = "black", shape=18)+
+    geom_point(data = sumario, aes(x=category, y=mediana), alpha=.9, size = 3, color = "black", shape=4)+
+    geom_point(data = sumario, aes(x=category, y=mais), alpha=.9, size = 3, color = "black", shape=6)+
+    geom_point(data = sumario, aes(x=category, y=menos), alpha=.9, size = 3, color = "black", shape=2)+
+    scale_y_continuous(trans='log2', limits = c(0.01, 4098), breaks = c(0.01, 0.1,0.5,1,2,4,8,16,32,64,128,256, 4098))+
+    labs(
+         x = "CATEGORIA", 
+         y = "ERRO",
+         title = "Erro abs por categorias"
+    )
+```
+
+Em todas as categorias existe uma grande quantidade de acertos na previsão (erro zero). 
+O erro na categoria Operacional tem uma cauda mais longa. Essas pontos extremos  equilibram a média em um valor equiparável com as outras categorias.
+
+
+```{r, warning=FALSE}
+ggplot(erros, aes(y=category_full, x=erro, color=category))+
+    #geom_jitter(height = 0.05, alpha = .4) +
+    #stat_summary(geom="point", fun=mean, color ="black", alpha=.8)+
+    geom_boxplot(alpha=0.7)+
+    theme(axis.text.y = element_text(hjust=0))+ 
+    scale_x_log10()+
+    labs(
+         x = "ERRO", 
+         y = "CATEGORIA e SUB CATEGORIA",
+         title = "Erro abs por categoria"
+    )
+```
+
+
+### Como se comparam as distribuições de tempo (real) das tarefas entre os diferentes times? Há times com tarefas consideravelmente maiores? 
+```{r, warning=FALSE}
+por_time = estimativas_raw %>% 
+    group_by(project_code, category) %>% 
+    summarise(devs = n_distinct(developer_id),
+              erro_medio_abs = mean(abs(hours_estimate - hours_actual)), 
+              estimativas = n(),
+              tempo_real = sum(developer_hours_actual),
+              .groups = "drop")
+
+por_time %>% ggplot(aes(y=reorder(project_code, tempo_real), x=tempo_real, color=category, fill = category)) +  
+    geom_bar(position = "stack",  stat='identity') + 
+    geom_vline(xintercept = mean(devs$tempo), color="black")+
+    labs(
+         x = "TEMPO", 
+         y = "PROJETO",
+         title = "TEMPO por projeto"
+    )
+```
+
+```{r, warning=FALSE}
+por_projeto = estimativas_unicas %>% 
+    group_by(project_code) 
+
+
+por_projeto %>% ggplot(aes(y=reorder(project_code, hours_actual), x=hours_actual, color=project_code)) +  
+    geom_jitter(height = 0.02, alpha=0.1) + 
+    geom_vline(xintercept = mean(por_projeto$hours_actual), color="black") + 
+    geom_vline(xintercept = median(por_projeto$hours_actual), color="blue") + 
+    scale_x_continuous(trans='log10', breaks = c(0.01, 0.1,1,10,100,1000))+
+    labs(
+         x = "HORAS", 
+         y = "PROJETO",
+         title = "Horas de tarefa por projeto"
+    )
+```
+
+Alguns poucos projetos são bem mais mais exigidos do que outros. 
+A distribuicão de categoria de tarefa é bem variada entre projetos.
+A média está bem deslocada por conta de pontos extremos.
+

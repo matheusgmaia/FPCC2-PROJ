@@ -1,0 +1,24 @@
+"0","```r
+dados = read_csv(here::here(\"data/arquivo-baixado.csv\"))
+```"
+"1","
+── Column specification ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+cols(
+  Curso = col_character(),
+  Timestamp = col_character(),
+  `Quantas horas por noite você dorme DURANTE A SEMANA em média?` = col_double(),
+  `Quantas horas por noite você dorme durante NO FIM DE SEMANA em média?` = col_double(),
+  `Quantas disciplinas você está cursando esse semestre?` = col_double(),
+  `Quantas xícaras de café você tomou ontem?` = col_double(),
+  `Quantas pessoas você segue no github?` = col_double(),
+  `Quantas pessoas seguem você no github?` = col_double(),
+  `Você está dois períodos ou menos de concluir?` = col_character()
+)
+"
+"0","```r
+dados = dados %>%
+rename(
+sono_semana = `Quantas horas por noite você dorme DURANTE A SEMANA em média?`,
+sono_fds = `Quantas horas por noite você dorme durante NO FIM DE SEMANA em média?`
+)
+```"

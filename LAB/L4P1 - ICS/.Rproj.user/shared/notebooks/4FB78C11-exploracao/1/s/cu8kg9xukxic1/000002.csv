@@ -1,0 +1,4 @@
+"0","```r
+clima %>% 
+    count(cidade)
+```"
